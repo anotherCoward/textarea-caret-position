@@ -106,3 +106,56 @@ Firefox 27
 
 * Dan Dascalescu ([dandv](https://github.com/dandv))
 * Jonathan Ong ([jonathanong](https://github.com/jonathanong))
+
+## Changes done to 3.0.0 original
+
+I have updated the whole thing to work with contenteditable divs and other stuff.
+## Changes
+- Added contenteditable support (for contenteditable="true" and contenteditable="plaintext-only")
+- Added relative-Scroll-Position (options.withScrolls = boolean)
+- Added viewport-related position detection. (options.absolute = boolean)
+- Added tabindex, iframe and canvas stuff. (options.checkTabIndex = boolean)
+- Replaced div.innerText with a `<span style="all: unset">`-loop for each line adding a br (except last), applies the effects on textareas much better.
+- Removed the replacement from space in inputs, as white-space-property of "pre" fullfills this job too.
+- Changed font-family of the position-detection-span for textarea/input to monospace, a single dot is to small on fonts like serif/sans-serif, but only if there is no following text.
+- Reduced the size of the following-text to 1024 chars, this should be fine on most installments.
+- Added auto-position-detection, giving a position is no longer required (uses always the caret focus position)
+- Added auto-element-detection, giving an element is no longer required (uses document.activeElement and calls itself)
+- Added a "node" to the result, which returns the focused node.
+  on textareas and inputs, it is the element itself, on contenteditable it is #text it most cases. Depending on selection.range
+- Added option: nextToParent = boolean (textarea/input only)
+   The textarea/input-clone will be added to the same node as the textarea/input is to apply possible unknown css selectors
+- Added option: applyClass = 'string' (textarea/input only)
+  if set, the cloned divs class will apply this string
+- Added a check if the element.isConnected to avoid calculations that are not possible at all (https://developer.mozilla.org/en-US/docs/Web/API/Node/isConnected)
+- Added style.all = 'unset' to the divs span and lineHeight = '1em' to get the correct caret-height, even if lineHeight = 'normal' (https://developer.mozilla.org/en-US/docs/Web/CSS/all)
+- Fixed the line-height NaN Bug on Chrome
+- Fixed some other bugs mentioned in the issues here, not sure which... sorry. :D
+
+## Usage
+### getCaretCoordinates(element, position, options);
+### element [optional]
+- _HTML Node Element_ that isConnected to the root in any way
+**Note:** Fill in null, if you want to use the document.activeElement and detect the rest automatically
+### position [optional] (only textarea and input fields)
+- _number_ of index position to use, gets automatically detected if the element has focus
+**Note:** Fill in null, if you want to detect it automatically and apply options
+### options [optional]
+- **withScrolls** _boolean_ - returns the relative position depending on scroll inside the selected node
+- **checkTabIndex** _boolean_ checks if tabindex of the given activeElement is set (required for certain divs to get the relative position to this div) otherwise it will fall back to body.
+- **nextToParent** _boolean_ creates the clone on the same node as the textarea/input clone is.
+- **applyClass** _string_ applys the given classes to the div (textarea/input only)
+- **absolute** _boolean_ left and top values are relative to the viewport, ideal for nodes, that should be placed next to the caret. (position: fixed)
+- **debug** _removed_
+
+
+## Issues
+- There is an issue with the following text on textareas while editing like: `|[new text]<span>loooooooooooooooooooooooooooooooooooooooooooooong word</span>`
+- There is an issue in contenteditable="true" with html elements different to text, depending on the browser the selection differs.
+  I suggest just to add a user-select: none to every replaced thing like emojis or `<span><myStuff>&nbsp;</span>`
+- IE below 9 is not supported anymore. We have Edge anyway.
+
+## Source
+Just check http://jsfiddle.net/anotherCoward/sezkrm2c/
+- Still requires no libs - the jQuery lib is only impletend for easier testing
+- Examples could be found at the end of the source
