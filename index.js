@@ -1,155 +1,270 @@
-/* jshint browser: true */
+(function() {
+  var properties = [
+    'direction',
+    'boxSizing',
+    'width',
+    'height',
+    'overflowX',
+    'overflowY',
+    'borderTopWidth',
+    'borderRightWidth',
+    'borderBottomWidth',
+    'borderLeftWidth',
+    'borderStyle',
+    'paddingTop',
+    'paddingRight',
+    'paddingBottom',
+    'paddingLeft',
+    'fontStyle',
+    'fontVariant',
+    'fontWeight',
+    'fontStretch',
+    'fontSize',
+    'fontSizeAdjust',
+    'textRendering',
+    'lineHeight',
+    'fontFamily',
+    'textAlign',
+    'textTransform',
+    'textIndent',
+		'textOverflow',
+    'textDecoration',
+    'letterSpacing',
+    'wordSpacing',
+    'tabSize',
+    'MozTabSize'
+  ];
+	// i don't wanna check this everywhere... so lets set it once
+  const getComputedStyle = window.getComputedStyle || function getComputedStyle(e) {
+	  return e.currentStyle;
+	}
+  var isFirefox = (window.mozInnerScreenX != null);
 
-(function () {
+  function getCaretCoordinates(element, position, options) {
+    if (!element) {
+      return getCaretCoordinates(document.activeElement || document.documentElement, position, options);
+    }
+    if (!element.isConnected)
+      return {
+        top: 0,
+        left: 0,
+        height: 0,
+        node: element
+      }
+    if (~['CANVAS', 'IFRAME'].indexOf(element.nodeName) || (options && options.checkTabIndex && element.getAttribute('tabindex') != null)) {
+      let rect = element.getBoundingClientRect();
+      // required as they act different
+      return {
+        top: rect.y,
+        left: rect.x,
+        height: rect.height,
+        node: element
+      }
+    }
+    if (options && options.absolute) {
+	    let optionsClone = JSON.parse(JSON.stringify(options));
+	    optionsClone.absolute = false;
+      let relative = getCaretCoordinates(element, position, optionsClone),
+        erect = element.getBoundingClientRect();
+      return {
+        top: erect.top + relative.top,
+        left: erect.left + relative.left,
+        height: relative.height, // remember kids, drugs are bad
+        node: relative.node
+      }
+    }
+    // try to get it automatically
+    let special = ~['INPUT', 'TEXTAREA'].indexOf(element.nodeName);
+    // force it ALWAYS on every element other by getSelection()
+    if (position == null || !special) {
+      if (special) {
+        return getCaretCoordinates(element, element.selectionDirection == 'forward' ? element.selectionEnd : element.selectionStart, options);
+      } else {
+        if (window.getSelection().rangeCount) {
+          // Don't play around with the user selection
+          let sel = window.getSelection(),
+            range = sel.getRangeAt(0).cloneRange();
 
-// We'll copy the properties below into the mirror div.
-// Note that some browsers, such as Firefox, do not concatenate properties
-// into their shorthand (e.g. padding-top, padding-bottom etc. -> padding),
-// so we have to list every single property explicitly.
-var properties = [
-  'direction',  // RTL support
-  'boxSizing',
-  'width',  // on Chrome and IE, exclude the scrollbar, so the mirror div wraps exactly as the textarea does
-  'height',
-  'overflowX',
-  'overflowY',  // copy the scrollbar for IE
+          if (sel.getRangeAt(0).commonAncestorContainer == sel.extentNode.parentNode) {
+            // seems like ctrl+a, triple clicks or multiple div selection - not sure how to act, collapse it at the focusNode is the best option 
+            range.setStart(sel.focusNode, sel.focusOffset);
+            range.setEndAfter(range.startContainer);
+          };
+          range.collapse(
+            range.startOffset === sel.focusOffset &&
+            range.startContainer == sel.focusNode
+          );
 
-  'borderTopWidth',
-  'borderRightWidth',
-  'borderBottomWidth',
-  'borderLeftWidth',
-  'borderStyle',
+          let rect = range.getBoundingClientRect();
+          // check for textnodes
+          let height = parseInt(range.startContainer.nodeType == 1 ? getComputedStyle(range.startContainer).lineHeight : getComputedStyle(range.startContainer.parentNode).lineHeight);
+          // empty div on contenteditable="true"
+          let allzero = true;
+          for (let i in rect)
+            if (rect[i] != 0 && !isNaN(rect[i]))
+              allzero = false;
+          let modified = false;
+          if (allzero && (range.commonAncestorContainer.nodeType == 1 && ~['true', 'plaintext-only'].indexOf(range.commonAncestorContainer.getAttribute('contenteditable')) || (range.commonAncestorContainer.innerText != null && range.commonAncestorContainer.innerText.length))) {
+            if (~['true', 'plaintext-only'].indexOf(range.commonAncestorContainer.getAttribute('contenteditable')) && document.activeElement.firstChild == null) {
+              document.activeElement.innerHTML = '<br>';
+              range.setStart(document.activeElement.firstChild, 0);
+              range.setEnd(range.startContainer, 0);
+              modified = true;
+            } else {
+              // fails if caret is after an empty element
+              range.setEndAfter(range.startContainer);
+            }
+            rect = range.getBoundingClientRect();
+            height = parseInt(getComputedStyle(range.startContainer).lineHeight);
+            // well contenteditable, pressing "backspace" removes the first inner div containing a <br>, this "breaks" the positiondetection
+            if (range.startContainer.firstChild === null) {
+              rect = range.startContainer.getBoundingClientRect();
+              height = parseInt(getComputedStyle(range.startContainer).lineHeight);
+            }
+          } else if (allzero) {
+            // if clicked on an anonymous block, browsers act different, chrome selects the next sibling while Edge and Firefox select the last char before the anonymous block
+            range.setStart(document.activeElement, 0);
+            range.setEndAfter(document.activeElement);
+            rect = document.activeElement.getBoundingClientRect();
+            height = parseInt(getComputedStyle(range.startContainer).lineHeight);
+          }
+          // chrome 'lineHeight = normal'
+          if (isNaN(height)) {
+            let node = range.startContainer;
+            if (range.startContainer.nodeType != 1) {
+              node = node.parentNode;
+            }
+            let current = node.style.lineHeight;
+            node.style.lineHeight = '1em';
+            height = parseInt(getComputedStyle(node).lineHeight);
+            node.style.lineHeight = current != null ? current : '';
+            if (!node.getAttribute('style').length) // clean up if empty
+              node.removeAttribute('style');
+          }
 
-  'paddingTop',
-  'paddingRight',
-  'paddingBottom',
-  'paddingLeft',
+          let erect = //thihihi
+            element.getBoundingClientRect(),
+            coordinates = {
+              top: rect.top - erect.top,
+              left: rect.left - erect.left,
+              height: height,
+              node: range.startContainer
+            };
+          if (options && options.withScrolls) {
+            if (element.scrollLeft)
+              coordinates.left = coordinates.left + element.scrollLeft;
+            if (element.scrollHeight)
+              coordinates.top = coordinates.top + element.scrollTop;
+          }
+          if (modified) {
+            coordinates.node = document.activeElement;
+            document.activeElement.removeChild(document.activeElement.firstChild);
 
-  // https://developer.mozilla.org/en-US/docs/Web/CSS/font
-  'fontStyle',
-  'fontVariant',
-  'fontWeight',
-  'fontStretch',
-  'fontSize',
-  'fontSizeAdjust',
-  'lineHeight',
-  'fontFamily',
-
-  'textAlign',
-  'textTransform',
-  'textIndent',
-  'textDecoration',  // might not make a difference, but better be safe
-
-  'letterSpacing',
-  'wordSpacing',
-
-  'tabSize',
-  'MozTabSize'
-
-];
-
-var isBrowser = (typeof window !== 'undefined');
-var isFirefox = (isBrowser && window.mozInnerScreenX != null);
-
-function getCaretCoordinates(element, position, options) {
-  if (!isBrowser) {
-    throw new Error('textarea-caret-position#getCaretCoordinates should only be called in a browser');
-  }
-
-  var debug = options && options.debug || false;
-  if (debug) {
-    var el = document.querySelector('#input-textarea-caret-position-mirror-div');
-    if (el) el.parentNode.removeChild(el);
-  }
-
-  // The mirror div will replicate the textarea's style
-  var div = document.createElement('div');
-  div.id = 'input-textarea-caret-position-mirror-div';
-  document.body.appendChild(div);
-
-  var style = div.style;
-  var computed = window.getComputedStyle ? window.getComputedStyle(element) : element.currentStyle;  // currentStyle for IE < 9
-  var isInput = element.nodeName === 'INPUT';
-
-  // Default textarea styles
-  style.whiteSpace = 'pre-wrap';
-  if (!isInput)
-    style.wordWrap = 'break-word';  // only for textarea-s
-
-  // Position off-screen
-  style.position = 'absolute';  // required to return coordinates properly
-  if (!debug)
-    style.visibility = 'hidden';  // not 'display: none' because we want rendering
-
-  // Transfer the element's properties to the div
-  properties.forEach(function (prop) {
-    if (isInput && prop === 'lineHeight') {
-      // Special case for <input>s because text is rendered centered and line height may be != height
-      if (computed.boxSizing === "border-box") {
-        var height = parseInt(computed.height);
-        var outerHeight =
-          parseInt(computed.paddingTop) +
-          parseInt(computed.paddingBottom) +
-          parseInt(computed.borderTopWidth) +
-          parseInt(computed.borderBottomWidth);
-        var targetHeight = outerHeight + parseInt(computed.lineHeight);
-        if (height > targetHeight) {
-          style.lineHeight = height - outerHeight + "px";
-        } else if (height === targetHeight) {
-          style.lineHeight = computed.lineHeight;
+          }
+          return coordinates;
         } else {
-          style.lineHeight = 0;
+          return {
+            top: 0,
+            left: 0,
+            height: 0,
+            node: element
+          }
+        }
+      }
+    }
+    let div = document.createElement('div'),
+      style = div.style,
+      computed = getComputedStyle(element),
+      isInput = element.nodeName === 'INPUT';
+    if (options && options.nextToParent)
+      element.parentNode.appendChild(div);
+    else
+      document.body.appendChild(div);
+    if (options && options.applyClass && (typeof options.applyClass == 'string' || options.applyClass instanceof String))
+      div.className = options.applyClass;
+    style.all = 'initial';
+    style.whiteSpace = 'pre-wrap';
+
+    if (!isInput) {
+			style.textOverflow = 'clip';
+      style.wordWrap = 'break-word';
+		}
+    style.position = 'absolute';
+    style.visibility = 'hidden';
+
+    properties.forEach(function(prop) {
+      if (isInput && prop === 'lineHeight') {
+        if (computed.boxSizing === "border-box") {
+          var height = parseInt(computed.height);
+          var outerHeight =
+            parseInt(computed.paddingTop) +
+            parseInt(computed.paddingBottom) +
+            parseInt(computed.borderTopWidth) +
+            parseInt(computed.borderBottomWidth);
+          var targetHeight = outerHeight + parseInt(computed.lineHeight);
+          if (height > targetHeight) {
+            style.lineHeight = height - outerHeight + "px";
+          } else if (height === targetHeight) {
+            style.lineHeight = computed.lineHeight;
+          } else {
+            style.lineHeight = 0;
+          }
+        } else {
+          style.lineHeight = computed.height;
         }
       } else {
-        style.lineHeight = computed.height;
+        style[prop] = computed[prop];
       }
-    } else {
-      style[prop] = computed[prop];
+    });
+
+    if (isInput) {
+      style.whiteSpace = 'pre'; // makes the replacement obsolete
+      style.overflowX = 'hidden';
+      style.overflowY = 'overlay';
     }
-  });
 
-  if (isFirefox) {
-    // Firefox lies about the overflow property for textareas: https://bugzilla.mozilla.org/show_bug.cgi?id=984275
-    if (element.scrollHeight > parseInt(computed.height))
-      style.overflowY = 'scroll';
-  } else {
-    style.overflow = 'hidden';  // for Chrome to not render a scrollbar; IE keeps overflowY = 'scroll'
+    let val = '';
+    val = element.value;
+		let to = val.substring(0, position).split('\n');
+		// instead of setting a inner text, appending each line as span with a br if required
+		to.forEach(function(line, index) {
+			let el = document.createElement('span');
+			el.appendChild(document.createTextNode(line));
+			el.style.all = 'unset';
+			el.style.textOverflow = 'clip';
+			if (!line.length)
+				el.innerText = '';
+			if (index+1 != to.length)
+				el.appendChild(document.createElement('br'));
+			div.appendChild(el);
+		});
+    // how about applying white-space property?
+
+    let span = document.createElement('span');
+
+    span.textContent = val.substr(position,1024) || '.';
+    // avoid other stylesheets like span { margin: 0 2px; }
+    span.style.all = 'unset';
+    span.style.lineHeight = '1em';
+		
+    div.appendChild(span);
+    let coordinates = {
+      top: span.offsetTop + parseInt(computed['borderTopWidth']),
+      left: span.offsetLeft + parseInt(computed['borderLeftWidth']),
+      height: parseInt(getComputedStyle(span).lineHeight),
+
+      node: element
+    };
+    div.parentNode.removeChild(div);
+    // get the caret respective to the scroll positions, even if negative
+    if (!options || !options.withScrolls) {
+      if (element.scrollLeft)
+        coordinates.left = coordinates.left - element.scrollLeft;
+      if (element.scrollHeight)
+        coordinates.top = coordinates.top - element.scrollTop;
+    }
+    return coordinates;
   }
-
-  div.textContent = element.value.substring(0, position);
-  // The second special handling for input type="text" vs textarea:
-  // spaces need to be replaced with non-breaking spaces - http://stackoverflow.com/a/13402035/1269037
-  if (isInput)
-    div.textContent = div.textContent.replace(/\s/g, '\u00a0');
-
-  var span = document.createElement('span');
-  // Wrapping must be replicated *exactly*, including when a long word gets
-  // onto the next line, with whitespace at the end of the line before (#7).
-  // The  *only* reliable way to do that is to copy the *entire* rest of the
-  // textarea's content into the <span> created at the caret position.
-  // For inputs, just '.' would be enough, but no need to bother.
-  span.textContent = element.value.substring(position) || '.';  // || because a completely empty faux span doesn't render at all
-  div.appendChild(span);
-
-  var coordinates = {
-    top: span.offsetTop + parseInt(computed['borderTopWidth']),
-    left: span.offsetLeft + parseInt(computed['borderLeftWidth']),
-    height: parseInt(computed['lineHeight'])
-  };
-
-  if (debug) {
-    span.style.backgroundColor = '#aaa';
-  } else {
-    document.body.removeChild(div);
-  }
-
-  return coordinates;
-}
-
-if (typeof module != 'undefined' && typeof module.exports != 'undefined') {
-  module.exports = getCaretCoordinates;
-} else if(isBrowser) {
-  window.getCaretCoordinates = getCaretCoordinates;
-}
-
-}());
+  this.getCaretCoordinates = getCaretCoordinates;
+  // falls back to window or global by default
+}(this));
