@@ -6,6 +6,8 @@
     'height',
     'overflowX',
     'overflowY',
+    'overflowWrap', // added
+    'overflowAnchor', // added
     'borderTopWidth',
     'borderRightWidth',
     'borderBottomWidth',
@@ -21,7 +23,8 @@
     'fontStretch',
     'fontSize',
     'fontSizeAdjust',
-    'textRendering',
+    'fontKerning',
+    'textRendering', // added
     'lineHeight',
     'fontFamily',
     'textAlign',
@@ -29,10 +32,13 @@
     'textIndent',
     'textOverflow',
     'textDecoration',
+    'textUnderlinePosition', // added
     'letterSpacing',
     'wordSpacing',
     'tabSize',
-    'MozTabSize'
+    'MozTabSize',
+    'textAlignLast', // added
+    //'transform', // won't work correctly, requires a lot more calculations for the correct position
   ];
   // i don't wanna check this everywhere... so lets set it once
   const getComputedStyle = window.getComputedStyle || function getComputedStyle(e) {
