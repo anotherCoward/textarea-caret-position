@@ -115,7 +115,6 @@ I have updated the whole thing to work with contenteditable divs and other stuff
 - Added relative-Scroll-Position (options.withScrolls = boolean)
 - Added viewport-related position detection. (options.absolute = boolean)
 - Added tabindex, iframe and canvas stuff. (options.checkTabIndex = boolean)
-- Replaced div.innerText with a `<span style="all: unset">`-loop for each line adding a br (except last), applies the effects on textareas much better.
 - Removed the replacement from space in inputs, as white-space-property of "pre" fullfills this job too.
 - Changed font-family of the position-detection-span for textarea/input to monospace, a single dot is to small on fonts like serif/sans-serif, but only if there is no following text.
 - Reduced the size of the following-text to 1024 chars, this should be fine on most installments.
