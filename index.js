@@ -81,7 +81,7 @@
         if (element.selectionDirection) {
           return getCaretCoordinates(element, element.selectionDirection == 'forward' ? element.selectionEnd : element.selectionStart, options);
         } else {
-          return getCaretCoordinates(element, position || 0, options);
+          return getCaretCoordinates(element, position || element.value.length, options);
         }
       } else {
         if (window.getSelection().rangeCount) {
@@ -212,12 +212,13 @@
             style.lineHeight = 0;
           }
         } else {
-          style.lineHeight = computed.height;
+          style.lineHeight = computed.lineHeight;
         }
       } else {
         style[prop] = computed[prop];
       }
     });
+
     // apply AFTER the loop
     style.position = 'absolute';
     style.visibility = 'hidden';
@@ -225,40 +226,33 @@
     style.overflowY = style.overflowX = style.overflow = 'overlay';
 
     if (isInput)
-      style.whiteSpace = 'pre';
+      style.whiteSpace = 'pre'; // makes the replacement obsolete
 
     let val = '';
     val = element.value;
-
     if (isInput && element.getAttribute('type') == 'password') {
       // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/password
       // maybe add a check for it...?
       // some use * some • - most browsers use •
-      val = val.split('').map(function(v) { return '•' }).join('');
+      val = val.split('').map(function(v) {
+        return '•'
+      }).join('');
     }
-    let to = val.substring(0, position).split('\n');
-    // instead of setting a inner text, appending each line as span with a br if required
-    to.forEach(function(line, index) {
-      let el = document.createElement('span');
-      el.appendChild(document.createTextNode(line));
-      el.style.all = 'unset';
-      el.style.textOverflow = 'clip';
-      if (!line.length)
-        el.innerText = '';
-      if (index + 1 != to.length)
-        el.appendChild(document.createElement('br'));
-      div.appendChild(el);
-    });
+    div.textContent = val.substr(0, position);
 
+    style.overflowY = style.overflowX = style.overflow = 'overlay';
 
     let span = document.createElement('span');
 
-    span.textContent = val.substr(position, 1024) || '.';
     // avoid other stylesheets like span { margin: 0 2px; }
     span.style.all = 'unset';
     span.style.lineHeight = '1em';
 
     div.appendChild(span);
+
+    span.textContent = val.substr(position, 1024) || '.';
+    if (span.textContent.length == 1)
+      span.fontFamily = 'monospace';
     let coordinates = {
       top: span.offsetTop + parseInt(computed['borderTopWidth']),
       left: span.offsetLeft + parseInt(computed['borderLeftWidth']),
@@ -277,5 +271,4 @@
     return coordinates;
   }
   this.getCaretCoordinates = getCaretCoordinates;
-  // falls back to window or global by default
 }(this));
