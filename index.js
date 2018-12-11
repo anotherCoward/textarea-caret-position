@@ -229,6 +229,13 @@
 
     let val = '';
     val = element.value;
+
+    if (isInput && element.getAttribute('type') == 'password') {
+      // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/password
+      // maybe add a check for it...?
+      // some use * some • - most browsers use •
+      val = val.split('').map(function(v) { return '•' }).join('');
+    }
     let to = val.substring(0, position).split('\n');
     // instead of setting a inner text, appending each line as span with a br if required
     to.forEach(function(line, index) {
