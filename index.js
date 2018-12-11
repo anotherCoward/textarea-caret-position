@@ -78,7 +78,11 @@
     // force it ALWAYS on every element other by getSelection()
     if (position == null || !special) {
       if (special) {
-        return getCaretCoordinates(element, element.selectionDirection == 'forward' ? element.selectionEnd : element.selectionStart, options);
+        if (element.selectionDirection) {
+          return getCaretCoordinates(element, element.selectionDirection == 'forward' ? element.selectionEnd : element.selectionStart, options);
+        } else {
+          return getCaretCoordinates(element, position || 0, options);
+        }
       } else {
         if (window.getSelection().rangeCount) {
           // Don't play around with the user selection
