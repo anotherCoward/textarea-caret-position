@@ -27,17 +27,17 @@
     'textAlign',
     'textTransform',
     'textIndent',
-		'textOverflow',
+    'textOverflow',
     'textDecoration',
     'letterSpacing',
     'wordSpacing',
     'tabSize',
     'MozTabSize'
   ];
-	// i don't wanna check this everywhere... so lets set it once
+  // i don't wanna check this everywhere... so lets set it once
   const getComputedStyle = window.getComputedStyle || function getComputedStyle(e) {
-	  return e.currentStyle;
-	}
+    return e.currentStyle;
+  }
   var isFirefox = (window.mozInnerScreenX != null);
 
   function getCaretCoordinates(element, position, options) {
@@ -62,8 +62,8 @@
       }
     }
     if (options && options.absolute) {
-	    let optionsClone = JSON.parse(JSON.stringify(options));
-	    optionsClone.absolute = false;
+      let optionsClone = JSON.parse(JSON.stringify(options));
+      optionsClone.absolute = false;
       let relative = getCaretCoordinates(element, position, optionsClone),
         erect = element.getBoundingClientRect();
       return {
@@ -186,11 +186,9 @@
     style.whiteSpace = 'pre-wrap';
 
     if (!isInput) {
-			style.textOverflow = 'clip';
+      style.textOverflow = 'clip';
       style.wordWrap = 'break-word';
-		}
-    style.position = 'absolute';
-    style.visibility = 'hidden';
+    }
 
     properties.forEach(function(prop) {
       if (isInput && prop === 'lineHeight') {
@@ -216,37 +214,39 @@
         style[prop] = computed[prop];
       }
     });
+    // apply AFTER the loop
+    style.position = 'absolute';
+    style.visibility = 'hidden';
+    // wont affect the size in any way but allows scrolling if required...
+    style.overflowY = style.overflowX = style.overflow = 'overlay';
 
-    if (isInput) {
-      style.whiteSpace = 'pre'; // makes the replacement obsolete
-      style.overflowX = 'hidden';
-      style.overflowY = 'overlay';
-    }
+    if (isInput)
+      style.whiteSpace = 'pre';
 
     let val = '';
     val = element.value;
-		let to = val.substring(0, position).split('\n');
-		// instead of setting a inner text, appending each line as span with a br if required
-		to.forEach(function(line, index) {
-			let el = document.createElement('span');
-			el.appendChild(document.createTextNode(line));
-			el.style.all = 'unset';
-			el.style.textOverflow = 'clip';
-			if (!line.length)
-				el.innerText = '';
-			if (index+1 != to.length)
-				el.appendChild(document.createElement('br'));
-			div.appendChild(el);
-		});
-    // how about applying white-space property?
+    let to = val.substring(0, position).split('\n');
+    // instead of setting a inner text, appending each line as span with a br if required
+    to.forEach(function(line, index) {
+      let el = document.createElement('span');
+      el.appendChild(document.createTextNode(line));
+      el.style.all = 'unset';
+      el.style.textOverflow = 'clip';
+      if (!line.length)
+        el.innerText = '';
+      if (index + 1 != to.length)
+        el.appendChild(document.createElement('br'));
+      div.appendChild(el);
+    });
+
 
     let span = document.createElement('span');
 
-    span.textContent = val.substr(position,1024) || '.';
+    span.textContent = val.substr(position, 1024) || '.';
     // avoid other stylesheets like span { margin: 0 2px; }
     span.style.all = 'unset';
     span.style.lineHeight = '1em';
-		
+
     div.appendChild(span);
     let coordinates = {
       top: span.offsetTop + parseInt(computed['borderTopWidth']),
