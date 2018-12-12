@@ -290,13 +290,12 @@
 
       node: element
     };
-    if (isEdge && isInput) {
-      // edge doesn't have scroll values on textareas and inputs set... screw it... the position is always with scrolling... so absolute will fail too.
+    span.textContent = '';
+    if (isEdge && isInput && div.scrollWidth > div.clientWidth) {
+      // edge doesn't have scroll values inputs set... screw it... the position is always with scrolling... so absolute will fail too.
       // this stops it at the end of the inputbox if scroll is present
-      span.textContent = '';
       coordinates.left += element.scrollWidth - div.scrollWidth;
     }
-
     div.parentNode.removeChild(div);
     // get the caret respective to the scroll positions, even if negative
     if (!options || !options.withScrolls) {
