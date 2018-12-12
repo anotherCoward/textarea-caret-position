@@ -163,7 +163,7 @@
             node.style.lineHeight = '1em';
             height = parseInt(getComputedStyle(node).lineHeight);
             node.style.lineHeight = current != null ? current : '';
-            if (typeof node.getAttribute('style') != 'undefined' && !node.getAttribute('style').length) // clean up if empty
+            if (typeof node.getAttribute('style') != 'undefined' && node.getAttribute('style') !== null && !node.getAttribute('style').length) // clean up if empty
               node.removeAttribute('style');
           }
 
