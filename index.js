@@ -23,7 +23,7 @@
     'fontStretch',
     'fontSize',
     'fontSizeAdjust',
-    'fontKerning',
+    'fontKerning', // added
     'textRendering', // added
     'lineHeight',
     'fontFamily',
@@ -48,19 +48,31 @@
   const getComputedStyle = window.getComputedStyle || function getComputedStyle(e) {
     return e.currentStyle;
   }
+  // Edge has no node.isConnected
+  const isConnected = function isConnected(el) {
+    if (el.isConnected)
+      return true;
+    if (el.parentNode) {
+      let parent = el.parentNode;
+      while (parent && parent != document.documentElement) parent = parent.parentNode;
+      return parent == document.documentElement;
+    }
+    return false;
+  }
   var isFirefox = (window.mozInnerScreenX != null);
 
   function getCaretCoordinates(element, position, options) {
     if (!element) {
       return getCaretCoordinates(document.activeElement || document.documentElement, position, options);
     }
-    if (!element.isConnected)
+    if (!isConnected(element)) {
       return {
         top: 0,
         left: 0,
         height: 0,
         node: element
       }
+    }
     if (~['CANVAS', 'IFRAME'].indexOf(element.nodeName) || (options && options.checkTabIndex && element.getAttribute('tabindex') != null)) {
       let rect = element.getBoundingClientRect();
       // required as they act different
@@ -151,7 +163,7 @@
             node.style.lineHeight = '1em';
             height = parseInt(getComputedStyle(node).lineHeight);
             node.style.lineHeight = current != null ? current : '';
-            if (!node.getAttribute('style').length) // clean up if empty
+            if (typeof node.getAttribute('style') != 'undefined' && !node.getAttribute('style').length) // clean up if empty
               node.removeAttribute('style');
           }
 
@@ -227,7 +239,6 @@
         style[prop] = computed[prop];
       }
     });
-
     // apply AFTER the loop
     style.position = 'absolute';
     style.visibility = 'hidden';
@@ -247,7 +258,7 @@
         return '•'
       }).join('');
     }
-    div.textContent = val.substr(0, position);
+    div.appendChild(document.createTextNode(val.substr(0, position)));
 
     style.overflowY = style.overflowX = style.overflow = 'overlay';
 
@@ -259,9 +270,10 @@
 
     div.appendChild(span);
 
-    span.textContent = val.substr(position, 1024) || '.';
+    span.appendChild(document.createTextNode(val.substr(position, 1024) || '.'));
     if (span.textContent.length == 1)
       span.fontFamily = 'monospace';
+
     let coordinates = {
       top: span.offsetTop + parseInt(computed['borderTopWidth']),
       left: span.offsetLeft + parseInt(computed['borderLeftWidth']),
