@@ -79,8 +79,8 @@
       let rect = element.getBoundingClientRect();
       // required as they act different
       return {
-        top: rect.y,
-        left: rect.x,
+        top: rect.top,
+        left: rect.left,
         height: rect.height,
         node: element
       }
