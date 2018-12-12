@@ -36,13 +36,14 @@
     'letterSpacing',
     'wordSpacing',
     'tabSize',
+    'writingMode', // added
     'MozTabSize',
     'textAlignLast', // added
     '-webkit-text-emphasis-style', // wont work correctly as the high gets hardly increased but is required to get the following lines correct
     '-webkit-text-emphasis-position',
     '-webkit-text-security', // password stuff
     '-webkit-font-smoothing',
-    'transform', // won't work correctly, requires a lot more calculations for the correct position
+    'transform', // won't work correctly in most cases, but transform: translate or translate3d could move the element node, try to detect it anyway , requires a lot more calculations for the correct position
   ];
   // i don't wanna check this everywhere... so lets set it once
   const getComputedStyle = window.getComputedStyle || function getComputedStyle(e) {
@@ -59,7 +60,8 @@
     }
     return false;
   }
-  var isFirefox = (window.mozInnerScreenX != null);
+  let isFirefox = (window.mozInnerScreenX != null);
+  let isEdge = /Edge|EdgA/.test(navigator.userAgent);
 
   function getCaretCoordinates(element, position, options) {
     if (!element) {
@@ -100,8 +102,17 @@
     // force it ALWAYS on every element other by getSelection()
     if (position == null || !special) {
       if (special) {
-        if (element.selectionDirection) {
-          return getCaretCoordinates(element, element.selectionDirection == 'forward' ? element.selectionEnd : element.selectionStart, options);
+        if (typeof element.selectionStart == 'number') {
+          // edge doesn't have it on textareas and on input fields its always forward... 'yay'
+          let dir = element.selectionDirection;
+          if (!dir) {
+            if (element.selectionStart >= element.selectionEnd) {
+              dir = 'backward';
+            } else {
+              dir = 'forward';
+            }
+          }
+          return getCaretCoordinates(element, dir == 'forward' ? element.selectionEnd : element.selectionStart, options);
         } else {
           return getCaretCoordinates(element, position || element.value.length, options);
         }
@@ -163,7 +174,7 @@
             node.style.lineHeight = '1em';
             height = parseInt(getComputedStyle(node).lineHeight);
             node.style.lineHeight = current != null ? current : '';
-            if (typeof node.getAttribute('style') != 'undefined' && node.getAttribute('style') !== null && !node.getAttribute('style').length) // clean up if empty
+            if (typeof node.getAttribute('style') == 'string' && !node.getAttribute('style').length) // clean up if empty
               node.removeAttribute('style');
           }
 
@@ -240,7 +251,7 @@
       }
     });
     // apply AFTER the loop
-    style.position = 'absolute';
+    style.position = 'fixed';
     style.visibility = 'hidden';
     // wont affect the size in any way but allows scrolling if required...
     style.overflowY = style.overflowX = style.overflow = 'overlay';
@@ -255,7 +266,7 @@
       // maybe add a check for it...?
       // some use * some • - most browsers use •
       val = val.split('').map(function(v) {
-        return '•'
+        return isEdge || isFirefox ? '●' : '•'
       }).join('');
     }
     div.appendChild(document.createTextNode(val.substr(0, position)));
@@ -269,11 +280,9 @@
     span.style.lineHeight = '1em';
 
     div.appendChild(span);
-
     span.appendChild(document.createTextNode(val.substr(position, 1024) || '.'));
     if (span.textContent.length == 1)
       span.fontFamily = 'monospace';
-
     let coordinates = {
       top: span.offsetTop + parseInt(computed['borderTopWidth']),
       left: span.offsetLeft + parseInt(computed['borderLeftWidth']),
@@ -281,6 +290,13 @@
 
       node: element
     };
+    if (isEdge && isInput) {
+      // edge doesn't have scroll values on textareas and inputs set... screw it... the position is always with scrolling... so absolute will fail too.
+      // this stops it at the end of the inputbox if scroll is present
+      span.textContent = '';
+      coordinates.left += element.scrollWidth - div.scrollWidth;
+    }
+
     div.parentNode.removeChild(div);
     // get the caret respective to the scroll positions, even if negative
     if (!options || !options.withScrolls) {
