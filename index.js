@@ -38,7 +38,11 @@
     'tabSize',
     'MozTabSize',
     'textAlignLast', // added
-    //'transform', // won't work correctly, requires a lot more calculations for the correct position
+    '-webkit-text-emphasis-style', // wont work correctly as the high gets hardly increased but is required to get the following lines correct
+    '-webkit-text-emphasis-position',
+    '-webkit-text-security', // password stuff
+    '-webkit-font-smoothing',
+    'transform', // won't work correctly, requires a lot more calculations for the correct position
   ];
   // i don't wanna check this everywhere... so lets set it once
   const getComputedStyle = window.getComputedStyle || function getComputedStyle(e) {
