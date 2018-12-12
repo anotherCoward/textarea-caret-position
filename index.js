@@ -98,9 +98,8 @@
           // Don't play around with the user selection
           let sel = window.getSelection(),
             range = sel.getRangeAt(0).cloneRange();
-
-          if (sel.getRangeAt(0).commonAncestorContainer == sel.focusNode.parentNode) {
-            // seems like ctrl+a, triple clicks or multiple div selection - not sure how to act, collapse it at the focusNode is the best option 
+          if (sel.getRangeAt(0).commonAncestorContainer == (sel.extentNode || sel.focusNode).parentNode) {
+            // seems like ctrl+a, triple clicks or multiple node selection - not sure how to act, collapse it at the focusNode is the best option 
             range.setStart(sel.focusNode, sel.focusOffset);
             range.setEndAfter(range.startContainer);
           };
